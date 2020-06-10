@@ -1,4 +1,3 @@
-# this opencv librayr
 import cv2
 
 #getting the file face_train to use its function
@@ -16,6 +15,11 @@ import shutil
 face_cascades = cv2.CascadeClassifier('../cascades/data/haarcascade_frontalface_alt2.xml')
 # face_cascades_2 = cv2.CascadeClassifier('../cascades/data/haarcascade_frontalface_alt2.xml')
 
+# this is a classifier that detects front facing eyes
+eye_cascade = cv2.CascadeClassifier('../cascades/data/haarcascade_eye.xml')
+
+# face_cascades_2 = cv2.CascadeClassifier('../cascades/data/haarcascade_frontalface_alt2.xml')
+
 
 # this is a recognizer model from opencv that classifies which face in the database
 # recognizer = cv2.face.createLBPHFaceRecognizer.create()
@@ -28,6 +32,7 @@ recognizer = cv2.face.LBPHFaceRecognizer_create()
 
 # this is a video capture to read images from the camera
 cap = cv2.VideoCapture(0)
+
 
 labels = {}
 
@@ -53,6 +58,7 @@ while(True):
         if(os.path.isdir("database/{}".format(name))):
             shutil.rmtree("database/{}".format(name))
             train()
+            print("successfully deleted user")
         else:
             print("not found!\n")
         
@@ -81,8 +87,8 @@ while(True):
 
             # then find the faces in the current frame using the face detector 
             # we previously defined in line 16
-            faces = face_cascades.detectMultiScale(gray, scaleFactor = 1.5, minNeighbors=5)
-            # faces_2 = face_cascades_2.detectMultiScale(gray, scaleFactor = 1.5, minNeighbors=5)
+            faces = face_cascades.detectMultiScale(gray, scaleFactor = 1.07, minNeighbors=5) # keep it consistent to train.py
+            # faces_2 = face_cascades_2.detectMultiScale(gray, scaleFactor = 1.3, minNeighbors=5)
 
             
 
@@ -91,17 +97,22 @@ while(True):
                 
                 # we cut the face  from the image
                 gray_cut = gray[y:y+h, x:x+w]
+                roi_color = frame[y:y+h, x:x+w]
                 
                 # pass the cut part to the recognizer to classify it.
                 # id_ is the name of user detected
                 # conf is the confidence and how we sure the model is 
                 # from this prediction
                 id_, conf = recognizer.predict(gray_cut)
+                #eyes = eye_cascade.detectMultiScale(gray_cut) #remove
+                
 
-                # from experience 45 is a good threshold
-                if conf>=70:
+                
+                if  90 >= conf >= 45:
                     print(id_)
                     print(labels[id_])
+                    print(conf)
+					
 
                     #from line 92 to 105 we are just putting a text on detected face 
                     # with the recongnized user's name
@@ -117,6 +128,7 @@ while(True):
                         fontScale,
                         fontColor,
                         lineType)
+              
 
 
             #     # now we loop over each face we found in the current frame
@@ -132,7 +144,7 @@ while(True):
             #     id_, conf = recognizer.predict(gray_cut)
 
             #     # from experience 45 is a good threshold
-            #     if conf>=55:
+            #     if conf>=45:
             #         print(id_)
             #         print(labels[id_])
 
@@ -163,11 +175,15 @@ while(True):
                 stroke = 2
                 end_cord_x = x+w
                 end_cord_y = y+h
-                cv2.rectangle(frame, (x,y), (end_cord_x, end_cord_y),color, stroke)
-
+                center = (x+w//2, y+h//2)
+                radius = (w+h)//4
+                cv2.circle(frame, center, radius,color, stroke)
+                eyes = eye_cascade.detectMultiScale(gray_cut)
+                for (ex, ey, ew, eh) in eyes:
+                    cv2.circle(roi_color, center, radius, (0, 255,0), 2)
             # here we show a real time
             cv2.imshow('frame', frame)
-            if cv2.waitKey(20) & 0xFF == ord('q'):
+            if cv2.waitKey(30) & 0xFF == ord('q'):
                 break
             
         cap.release()
